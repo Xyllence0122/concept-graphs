@@ -1,0 +1,4 @@
+# Keep NumPy 1.x for the tested ROS Jazzy cv_bridge ABI.
+numpy==1.26.4
+opencv-python==4.11.0.86
+ultralytics==8.4.154

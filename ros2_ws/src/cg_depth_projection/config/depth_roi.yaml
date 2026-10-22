@@ -1,0 +1,11 @@
+depth_roi_node:
+  ros__parameters:
+    depth_topic: /cg/d455/aligned_depth_to_color/image_raw
+    camera_info_topic: /cg/d455/aligned_depth_to_color/camera_info
+    output_topic: /concept_graph/debug/roi_points
+    roi_width_fraction: 0.30
+    roi_height_fraction: 0.30
+    stride: 4
+    depth_scale: 0.001
+    min_depth_m: 0.20
+    max_depth_m: 4.00

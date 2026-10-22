@@ -1,0 +1,23 @@
+services:
+  concept-graph:
+    build:
+      context: .
+      args:
+        ROS_IMAGE: ros:jazzy-ros-base-noble
+    image: concept-graph-d455:jazzy-cu128
+    network_mode: host
+    ipc: host
+    privileged: true
+    gpus: all
+    environment:
+      ROS_DOMAIN_ID: "${ROS_DOMAIN_ID:-73}"
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+      ROS_AUTOMATIC_DISCOVERY_RANGE: "${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}"
+      CG_MODEL_PATH: /models/yolo26n-seg.pt
+      CG_AI_SITE_PACKAGES: /opt/cg-ai/lib/python3.12/site-packages
+    volumes:
+      - /dev:/dev
+      - "${CG_MODEL_DIR:-./models}:/models:ro"
+      - "${CG_DATA_DIR:-./data}:/data"
+    stdin_open: true
+    tty: true

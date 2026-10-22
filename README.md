@@ -25,6 +25,14 @@
 
 ![Splash Figure](./assets/splash-final.png)
 
+## Fork addition: ROS 2 D455 semantic mapping
+
+This fork includes a tested ROS 2 Jazzy prototype for RealSense D455,
+RTAB-Map, YOLO instance segmentation, camera-to-map 3D projection, and a
+persistent semantic object graph. See
+[`ros2_ws/README.md`](ros2_ws/README.md) for installation, compatibility,
+Docker, DDS-domain, launch, and verification instructions.
+
 # Updates
 
 * The codebase has been significantly refactored in the `ali-dev` [branch](https://github.com/concept-graphs/concept-graphs/tree/ali-dev), which provides a real-time, streamlined re-implementation that supports RGB-D video from iPhone and has a better visualization using [Rerun.io](https://rerun.io/). We also provide this [getting started video tutorial](https://youtu.be/56jEFyrqqpo?si=jo-qto5Gv8qxqEw2). Please check it out!

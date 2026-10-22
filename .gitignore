@@ -176,3 +176,26 @@ cfslam/tmp.bash
 cfslam/wandb
 cfslam/tmp.png
 cfslam/temp.json
+
+# ROS 2 / D455 prototype build and runtime artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+ros2_ws/.venv/
+ros2_ws/.ros/
+ros2_ws/models/
+ros2_ws/data/
+ros2_ws/*.db
+ros2_ws/**/*.db
+ros2_ws/*.db3
+ros2_ws/**/*.db3
+ros2_ws/*.mcap
+ros2_ws/**/*.mcap
+ros2_ws/*.bag
+ros2_ws/**/*.bag
+ros2_ws/*.pt
+ros2_ws/**/*.pt
+ros2_ws/*.pth
+ros2_ws/**/*.pth
+ros2_ws/*.engine
+ros2_ws/**/*.engine

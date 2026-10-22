@@ -1,0 +1,11 @@
+yolo_segmentation_node:
+  ros__parameters:
+    image_topic: /cg/d455/color/image_raw
+    annotated_topic: /concept_graph/debug/segmentation_image
+    instance_map_topic: /concept_graph/segmentation/instance_map
+    detections_topic: /concept_graph/segmentation/detections_json
+    device: "auto"
+    confidence: 0.35
+    image_size: 640
+    process_every_n_frames: 5
+    max_detections: 20

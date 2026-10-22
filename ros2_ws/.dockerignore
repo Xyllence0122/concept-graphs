@@ -1,0 +1,15 @@
+.venv
+build
+install
+log
+data
+models
+**/__pycache__
+**/.pytest_cache
+*.bag
+*.db
+*.db3
+*.engine
+*.mcap
+*.pt
+*.pth

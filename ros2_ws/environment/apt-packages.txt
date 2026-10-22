@@ -1,0 +1,13 @@
+# Ubuntu 24.04 / ROS 2 Jazzy runtime and build dependencies.
+python3-colcon-common-extensions
+python3-pip
+python3-rosdep
+python3-venv
+ros-jazzy-cv-bridge
+ros-jazzy-desktop
+ros-jazzy-message-filters
+ros-jazzy-realsense2-camera
+ros-jazzy-rmw-cyclonedds-cpp
+ros-jazzy-rtabmap-ros
+ros-jazzy-sensor-msgs-py
+ros-jazzy-visualization-msgs

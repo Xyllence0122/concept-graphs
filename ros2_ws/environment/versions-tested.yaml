@@ -1,0 +1,31 @@
+snapshot_date: "2026-10-22"
+platform:
+  architecture: x86_64
+  os: Ubuntu 24.04
+  kernel: 7.0.0-31-generic
+ros:
+  distro: jazzy
+  rmw: rmw_cyclonedds_cpp
+  domain_id: 73
+camera:
+  model: Intel RealSense D455
+  firmware: 5.17.3.10
+  librealsense: 2.58.4
+  realsense_ros: 4.58.1
+slam:
+  rtabmap_ros: 0.23.13
+python:
+  version: 3.12.3
+  numpy: 1.26.4
+  opencv_python: 4.11.0.86
+  ultralytics: 8.4.154
+  pytorch: 2.11.0+cu128
+  torchvision: 0.26.0+cu128
+gpu:
+  model: NVIDIA GeForce RTX 4060 Laptop GPU
+  driver: 595.99.02
+  pytorch_cuda_runtime: "12.8"
+model:
+  filename: yolo26n-seg.pt
+  size_bytes: 6719965
+  sha256: 361fbfabab285c3237700b6bb91d7ecfa602cd945fffda8dbe1242829b71e73f
