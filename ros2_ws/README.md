@@ -3,6 +3,10 @@
 This directory packages the ROS 2 work used to turn Intel RealSense D455 RGB-D
 frames into persistent, map-frame semantic object nodes.
 
+The original paper implementation is kept separately in
+[`../upstream_concept_graphs/`](../upstream_concept_graphs/). It is not a build
+dependency of this ROS 2 workspace and uses a different Python/CUDA environment.
+
 The current data flow is:
 
 ```text
