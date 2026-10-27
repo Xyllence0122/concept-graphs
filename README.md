@@ -14,7 +14,7 @@ from being confused with the current ROS 2 Jazzy workspace.
 | Path | Purpose |
 | --- | --- |
 | [`ros2_ws/`](ros2_ws/) | Current ROS 2 D455 semantic-mapping implementation |
-| [`docs/DEVELOPMENT_LOG.md`](docs/DEVELOPMENT_LOG.md) | Chronological development, validation, and next-step record |
+| [`log/`](log/) | One dated Markdown file per development session |
 | [`.github/workflows/ros2-jazzy.yml`](.github/workflows/ros2-jazzy.yml) | Ubuntu 24.04 / ROS 2 Jazzy build and test workflow |
 | [`upstream_concept_graphs/`](upstream_concept_graphs/) | Preserved original ConceptGraphs research code and documentation |
 
@@ -23,9 +23,9 @@ The two codebases intentionally have separate dependency setups:
 - Use [`ros2_ws/README.md`](ros2_ws/README.md) for the current D455 and AMR work.
 - Use [`upstream_concept_graphs/README.md`](upstream_concept_graphs/README.md)
   only when reproducing the original paper pipeline.
-- Update [`docs/DEVELOPMENT_LOG.md`](docs/DEVELOPMENT_LOG.md) after each
-  development session so that results, evidence, limitations, and next steps
-  remain traceable.
+- After each development session, create a new `log/YYYY-MM-DD.md` file so
+  that results, evidence, limitations, and next steps remain traceable. The
+  existing entries are listed in [`log/`](log/).
 
 Do not install the original `environment.yml` into the ROS 2 virtual
 environment. The original pipeline targets an older Python/CUDA stack, while
