@@ -1,0 +1,2 @@
+data: '{"stamp": {"sec": 1793097491, "nanosec": 80229248}, "frame_id": "d455_color_optical_frame", "detector": "grounding_dino_sam", "text_queries": ["cardboard box", "whiteboard eraser"], "image_width": 640, "image_height": 480, "objects": [{"instance_id": 1, "class_id": 0, "label": "cardboard box", "confidence": 0.85693, "bbox_xyxy": [90, 173, 267, 372], "mask_pixels": 31103}, {"instance_id": 2, "class_id": 1, "label": "whiteboard eraser", "confidence": 0.40775, "bbox_xyxy": [423, 307, 601, 374], "mask_pixels": 8263}]}'
+---

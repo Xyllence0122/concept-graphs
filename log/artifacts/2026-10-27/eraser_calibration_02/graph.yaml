@@ -1,0 +1,2 @@
+data: '{"schema_version": 2, "coordinate_frame": "map", "fixed_camera_assumption": false, "relation_frame_convention": {"left_right_axis": "x", "vertical_axis": "z"}, "stamp": {"sec": 1793097302, "nanosec": 610549561}, "nodes": [{"node_id": "object_0001", "label": "whiteboard eraser", "centroid_m": {"x": 0.27125, "y": -0.00328, "z": -0.03301}, "bbox_3d_min_m": [0.25432, -0.09829, -0.06306], "bbox_3d_max_m": [0.31022, 0.04515, -0.01128], "confidence_mean": 0.54964, "observations": 130, "missed_frames": 0, "last_source_instance_id": 1}], "edges": []}'
+---

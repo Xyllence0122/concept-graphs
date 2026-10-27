@@ -1,0 +1,2 @@
+data: '{"stamp": {"sec": 1793096427, "nanosec": 313753906}, "frame_id": "d455_color_optical_frame", "detector": "grounding_dino_sam", "text_queries": ["box", "eraser"], "image_width": 640, "image_height": 480, "objects": [{"instance_id": 1, "class_id": 0, "label": "box", "confidence": 0.39309, "bbox_xyxy": [86, 226, 257, 320], "mask_pixels": 14018}]}'
+---

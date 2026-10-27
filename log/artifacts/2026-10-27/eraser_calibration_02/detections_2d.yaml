@@ -1,0 +1,2 @@
+data: '{"stamp": {"sec": 1793097307, "nanosec": 449707520}, "frame_id": "d455_color_optical_frame", "detector": "grounding_dino_sam", "text_queries": ["whiteboard eraser"], "image_width": 640, "image_height": 480, "objects": [{"instance_id": 1, "class_id": 0, "label": "whiteboard eraser", "confidence": 0.47854, "bbox_xyxy": [200, 280, 393, 365], "mask_pixels": 11788}]}'
+---
