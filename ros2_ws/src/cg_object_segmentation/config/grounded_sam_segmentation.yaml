@@ -8,7 +8,6 @@ grounded_sam_segmentation_node:
     grounding_model_revision: a2bb814dd30d776dcf7e30523b00659f4f141c71
     sam_model_id: facebook/sam-vit-base
     sam_model_revision: 70c1a07f894ebb5b307fd9eaaee97b9dfc16068f
-    text_prompt: "box. eraser."
     device: "auto"
     box_threshold: 0.20
     text_threshold: 0.20
