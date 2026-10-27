@@ -1,0 +1,19 @@
+grounded_sam_segmentation_node:
+  ros__parameters:
+    image_topic: /cg/d455/color/image_raw
+    annotated_topic: /concept_graph/debug/segmentation_image
+    instance_map_topic: /concept_graph/segmentation/instance_map
+    detections_topic: /concept_graph/segmentation/detections_json
+    grounding_model_id: IDEA-Research/grounding-dino-tiny
+    grounding_model_revision: a2bb814dd30d776dcf7e30523b00659f4f141c71
+    sam_model_id: facebook/sam-vit-base
+    sam_model_revision: 70c1a07f894ebb5b307fd9eaaee97b9dfc16068f
+    text_prompt: "box. eraser."
+    device: "auto"
+    box_threshold: 0.20
+    text_threshold: 0.20
+    mask_threshold: 0.0
+    nms_iou_threshold: 0.50
+    process_every_n_frames: 30
+    max_detections: 10
+    use_fp16: true

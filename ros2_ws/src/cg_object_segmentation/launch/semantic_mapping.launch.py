@@ -32,10 +32,20 @@ def _default_model_path() -> str:
 
 
 def _launch_nodes(context: LaunchContext) -> list[Node]:
-    yolo_config = (
+    detector_backend = LaunchConfiguration("detector_backend").perform(context)
+    if detector_backend not in {"grounded_sam", "yolo"}:
+        raise ValueError(
+            "detector_backend must be 'grounded_sam' or 'yolo', got "
+            f"{detector_backend!r}"
+        )
+    detector_config = (
         Path(get_package_share_directory("cg_object_segmentation"))
         / "config"
-        / "yolo_segmentation.yaml"
+        / (
+            "grounded_sam_segmentation.yaml"
+            if detector_backend == "grounded_sam"
+            else "yolo_segmentation.yaml"
+        )
     )
     graph_config = (
         Path(get_package_share_directory("cg_object_segmentation"))
@@ -48,19 +58,56 @@ def _launch_nodes(context: LaunchContext) -> list[Node]:
         for value in (ai_site_packages, os.environ.get("PYTHONPATH", ""))
         if value
     )
-    model_path = LaunchConfiguration("model_path").perform(context)
     target_frame = LaunchConfiguration("target_frame").perform(context)
     odom_frame = LaunchConfiguration("odom_frame").perform(context)
 
-    return [
-        Node(
+    if detector_backend == "grounded_sam":
+        detector_node = Node(
+            package="cg_object_segmentation",
+            executable="grounded_sam_segmentation_node",
+            name="grounded_sam_segmentation_node",
+            output="screen",
+            parameters=[
+                str(detector_config),
+                {
+                    "grounding_model_id": LaunchConfiguration(
+                        "grounding_model_id"
+                    ).perform(context),
+                    "grounding_model_revision": LaunchConfiguration(
+                        "grounding_model_revision"
+                    ).perform(context),
+                    "sam_model_id": LaunchConfiguration("sam_model_id").perform(
+                        context
+                    ),
+                    "sam_model_revision": LaunchConfiguration(
+                        "sam_model_revision"
+                    ).perform(context),
+                    "text_prompt": LaunchConfiguration("text_prompt").perform(
+                        context
+                    ),
+                },
+            ],
+            additional_env={"PYTHONPATH": python_path},
+        )
+    else:
+        detector_node = Node(
             package="cg_object_segmentation",
             executable="yolo_segmentation_node",
             name="yolo_segmentation_node",
             output="screen",
-            parameters=[str(yolo_config), {"model_path": model_path}],
+            parameters=[
+                str(detector_config),
+                {
+                    "model_path": LaunchConfiguration("model_path").perform(
+                        context
+                    )
+                },
+            ],
             additional_env={"PYTHONPATH": python_path},
-        ),
+        )
+
+    return [
+        detector_node,
         Node(
             package="cg_object_segmentation",
             executable="object_3d_projection_node",
@@ -107,6 +154,27 @@ def generate_launch_description() -> LaunchDescription:
                     "Python site-packages directory containing torch and "
                     "ultralytics. Set CG_AI_SITE_PACKAGES to avoid passing it."
                 ),
+            ),
+            DeclareLaunchArgument(
+                "detector_backend", default_value="grounded_sam"
+            ),
+            DeclareLaunchArgument(
+                "text_prompt", default_value="box. eraser."
+            ),
+            DeclareLaunchArgument(
+                "grounding_model_id",
+                default_value="IDEA-Research/grounding-dino-tiny",
+            ),
+            DeclareLaunchArgument(
+                "grounding_model_revision",
+                default_value="a2bb814dd30d776dcf7e30523b00659f4f141c71",
+            ),
+            DeclareLaunchArgument(
+                "sam_model_id", default_value="facebook/sam-vit-base"
+            ),
+            DeclareLaunchArgument(
+                "sam_model_revision",
+                default_value="70c1a07f894ebb5b307fd9eaaee97b9dfc16068f",
             ),
             DeclareLaunchArgument("target_frame", default_value="map"),
             DeclareLaunchArgument("odom_frame", default_value="odom"),

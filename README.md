@@ -1,8 +1,9 @@
 # ROS 2 D455 Semantic Mapping for AMR
 
 This fork is organized around the ROS 2 prototype currently under development:
-RealSense D455 RGB-D input, RTAB-Map localization and mapping, YOLO instance
-segmentation, 3D object projection, and a persistent semantic object graph.
+RealSense D455 RGB-D input, RTAB-Map localization and mapping, Grounding DINO
+open-vocabulary detection, SAM instance segmentation, 3D object projection,
+and a persistent semantic object graph. YOLO remains available as a fallback.
 
 The research repository that this work started from is preserved separately in
 [`upstream_concept_graphs/`](upstream_concept_graphs/). Keeping it in one
@@ -37,7 +38,8 @@ Python 3.12.
 ```text
 RealSense D455 RGB + aligned depth
   -> RTAB-Map visual odometry and map transform
-  -> YOLO instance masks
+  -> Grounding DINO text-prompted boxes
+  -> SAM instance masks
   -> depth back-projection into camera-frame 3D objects
   -> transform into the map frame
   -> persistent semantic object graph and RViz markers
@@ -70,12 +72,15 @@ cd ros2_ws
 source scripts/ros_env.sh
 source install/setup.bash
 export CG_AI_SITE_PACKAGES="$PWD/.venv/lib/python3.12/site-packages"
-export CG_MODEL_PATH="$HOME/concept_graph_models/yolo26n-seg.pt"
+export CG_AI_PYTHON="$PWD/.venv/bin/python"
+export CG_DETECTOR_BACKEND=grounded_sam
 ./scripts/check_environment.sh
 
 ./scripts/run_d455_mapping.sh \
-  database_path:="$HOME/concept_graph_data/rtabmap/d455_lab.db" \
+  database_path:="$HOME/Concept Graph/concept_graph_data/rtabmap/d455_lab.db" \
   delete_db_on_start:=true \
+  detector_backend:=grounded_sam \
+  text_prompt:="box. eraser." \
   rtabmap_viz:=true
 ```
 
@@ -86,6 +91,9 @@ guide.
 
 ## Current limitations
 
+- Grounding DINO + SAM implements the ConceptGraphs-Detect style 2D front end,
+  not the whole paper pipeline. Automatic RAM/Tag2Text class discovery,
+  per-region CLIP features, and LLM-derived relations are still absent.
 - Spatial relation edges currently use axis-aligned 3D bounding boxes and fixed
   thresholds; semantic support relations such as `on` and `inside` are not yet
   generated.

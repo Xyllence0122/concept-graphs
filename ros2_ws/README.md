@@ -7,12 +7,13 @@ The original paper implementation is kept separately in
 [`../upstream_concept_graphs/`](../upstream_concept_graphs/). It is not a build
 dependency of this ROS 2 workspace and uses a different Python/CUDA environment.
 
-The current data flow is:
+The default data flow is:
 
 ```text
 D455 RGB + aligned depth
   -> RTAB-Map visual odometry / map TF
-  -> YOLO instance masks
+  -> Grounding DINO open-vocabulary boxes from a text prompt
+  -> SAM instance masks
   -> mask + depth back-projection
   -> camera-frame 3D objects
   -> map-frame 3D objects
@@ -23,6 +24,12 @@ This is a reproducible prototype, not yet the complete ConceptGraphs paper
 pipeline. It generates deterministic geometric relations (`near`,
 `left_of/right_of`, and `above/below`), but not learned or language-derived
 relations.
+
+The Grounding DINO + SAM path corresponds to the upstream
+**ConceptGraphs-Detect** 2D front end. The paper repository's other
+"ConceptGraphs" path runs SAM in segment-all mode without an open-vocabulary
+detector. This ROS prototype does not yet include RAM/Tag2Text automatic class
+proposal, per-region CLIP embeddings, or LLM-generated object relations.
 
 ## Tested compatibility baseline
 
@@ -42,7 +49,14 @@ The exact machine snapshot is recorded in
 | Python | 3.12.3 |
 | PyTorch | 2.11.0 + CUDA 12.8 wheel |
 | Ultralytics | 8.4.154 |
+| Transformers | 5.21.0 |
 | GPU used for validation | RTX 4060 Laptop, driver 595.99.02 |
+
+The open-vocabulary model revisions are pinned in
+[`environment/versions-tested.yaml`](environment/versions-tested.yaml). The
+default pair is `IDEA-Research/grounding-dino-tiny` plus
+`facebook/sam-vit-base`. Model weights are downloaded into the Hugging Face
+cache on first use and are deliberately not committed to Git.
 
 The lock files target x86_64. Do not use the CUDA wheel lock unchanged on an
 ARM64/Jetson target. A target-specific PyTorch build is required there.
@@ -104,7 +118,8 @@ cd ros2_ws
 source scripts/ros_env.sh
 source install/setup.bash
 export CG_AI_SITE_PACKAGES="$PWD/.venv/lib/python3.12/site-packages"
-export CG_MODEL_PATH="$HOME/concept_graph_models/yolo26n-seg.pt"
+export CG_AI_PYTHON="$PWD/.venv/bin/python"
+export CG_DETECTOR_BACKEND=grounded_sam
 ./scripts/check_environment.sh
 ```
 
@@ -112,9 +127,26 @@ Start the complete D455 + RTAB-Map + semantic pipeline:
 
 ```bash
 ./scripts/run_d455_mapping.sh \
-  database_path:="$HOME/concept_graph_data/rtabmap/d455_lab.db" \
+  database_path:="$HOME/Concept Graph/concept_graph_data/rtabmap/d455_lab.db" \
   delete_db_on_start:=true \
+  detector_backend:=grounded_sam \
+  text_prompt:="box. eraser." \
   rtabmap_viz:=true
+```
+
+Separate object names with periods in `text_prompt`; keep the names lowercase.
+For example, `text_prompt:="box. eraser. chair."`. Grounding DINO produces
+text-conditioned 2D boxes and SAM refines each box into a mask. The downstream
+topics are identical to the YOLO path, so depth projection and graph nodes do
+not need detector-specific changes.
+
+To use the previous closed-set YOLO path instead:
+
+```bash
+export CG_MODEL_PATH="$HOME/Concept Graph/models/yolo26n-seg.pt"
+./scripts/run_d455_mapping.sh \
+  detector_backend:=yolo \
+  yolo_model_path:="$CG_MODEL_PATH"
 ```
 
 Set `delete_db_on_start:=false` after the initial mapping run when the existing
@@ -142,8 +174,9 @@ Inside the container:
 
 ```bash
 ros2 launch cg_object_segmentation d455_mapping.launch.py \
-  yolo_model_path:=/models/yolo26n-seg.pt \
-  yolo_ai_site_packages:=/opt/cg-ai/lib/python3.12/site-packages \
+  detector_backend:=grounded_sam \
+  text_prompt:="box. eraser." \
+  ai_site_packages:=/opt/cg-ai/lib/python3.12/site-packages \
   database_path:=/data/d455_lab.db
 ```
 
@@ -180,7 +213,7 @@ Important outputs:
 
 | Topic | Meaning |
 | --- | --- |
-| `/concept_graph/debug/segmentation_image` | YOLO visualization |
+| `/concept_graph/debug/segmentation_image` | Grounding DINO + SAM visualization |
 | `/concept_graph/objects/detections_3d_json` | camera-frame 3D detections |
 | `/concept_graph/objects/detections_map_json` | map-frame 3D detections |
 | `/concept_graph/graph/json` | persistent semantic object graph |
@@ -205,6 +238,10 @@ ros2 topic echo /concept_graph/graph/json --once --full-length
 
 ## Known limitations
 
+- Open-vocabulary classes are currently supplied manually through
+  `text_prompt`; RAM/Tag2Text automatic class discovery is not implemented.
+- Per-region CLIP embeddings and language-generated captions/relations from the
+  paper pipeline are not implemented yet.
 - Spatial edges are based on axis-aligned bounding boxes and fixed thresholds;
   `on`, `inside`, and learned semantic relations are not built yet.
 - Association is greedy label-plus-distance tracking, so duplicate object nodes

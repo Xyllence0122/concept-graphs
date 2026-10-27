@@ -35,6 +35,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
+            "grounded_sam_segmentation_node = "
+            "cg_object_segmentation.grounded_sam_segmentation_node:main",
             "yolo_segmentation_node = "
             "cg_object_segmentation.yolo_segmentation_node:main",
             "object_3d_projection_node = "

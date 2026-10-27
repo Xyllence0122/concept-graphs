@@ -19,6 +19,7 @@ python:
   numpy: 1.26.4
   opencv_python: 4.11.0.86
   ultralytics: 8.4.154
+  transformers: 5.21.0
   pytorch: 2.11.0+cu128
   torchvision: 0.26.0+cu128
 gpu:
@@ -29,3 +30,8 @@ model:
   filename: yolo26n-seg.pt
   size_bytes: 6719965
   sha256: 361fbfabab285c3237700b6bb91d7ecfa602cd945fffda8dbe1242829b71e73f
+open_vocabulary_models:
+  grounding_dino: IDEA-Research/grounding-dino-tiny
+  grounding_dino_revision: a2bb814dd30d776dcf7e30523b00659f4f141c71
+  sam: facebook/sam-vit-base
+  sam_revision: 70c1a07f894ebb5b307fd9eaaee97b9dfc16068f

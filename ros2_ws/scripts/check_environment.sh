@@ -74,12 +74,13 @@ if [ -x "${ai_python}" ]; then
 import cv2
 import numpy
 import torch
+import transformers
 import ultralytics
 
 print(f"      Python AI stack: torch={torch.__version__}, "
       f"CUDA={torch.version.cuda}, available={torch.cuda.is_available()}, "
       f"ultralytics={ultralytics.__version__}, numpy={numpy.__version__}, "
-      f"opencv={cv2.__version__}")
+      f"opencv={cv2.__version__}, transformers={transformers.__version__}")
 raise SystemExit(0 if numpy.__version__.startswith("1.26.") else 1)
 PY
     then
@@ -97,18 +98,36 @@ else
     warn "NVIDIA driver unavailable; device:auto will fall back to CPU"
 fi
 
-model_path="${CG_MODEL_PATH:-${HOME}/concept_graph_models/yolo26n-seg.pt}"
-expected_sha="361fbfabab285c3237700b6bb91d7ecfa602cd945fffda8dbe1242829b71e73f"
-if [ -f "${model_path}" ]; then
-    actual_sha="$(sha256sum "${model_path}" | awk '{print $1}')"
-    if [ "${actual_sha}" = "${expected_sha}" ]; then
-        pass "YOLO model checksum matches the tested artifact"
-    else
-        warn "YOLO model exists but checksum differs: ${actual_sha}"
-    fi
-else
-    fail "YOLO model is missing at ${model_path}"
-fi
+detector_backend="${CG_DETECTOR_BACKEND:-grounded_sam}"
+case "${detector_backend}" in
+    grounded_sam)
+        pass "detector backend is grounded_sam"
+        hf_cache="${HF_HOME:-${HOME}/.cache/huggingface}/hub"
+        if [ -d "${hf_cache}/models--IDEA-Research--grounding-dino-tiny" ] \
+            && [ -d "${hf_cache}/models--facebook--sam-vit-base" ]; then
+            pass "Grounding DINO and SAM model caches are present"
+        else
+            warn "Grounding DINO/SAM weights will download on first launch"
+        fi
+        ;;
+    yolo)
+        model_path="${CG_MODEL_PATH:-${HOME}/concept_graph_models/yolo26n-seg.pt}"
+        expected_sha="361fbfabab285c3237700b6bb91d7ecfa602cd945fffda8dbe1242829b71e73f"
+        if [ -f "${model_path}" ]; then
+            actual_sha="$(sha256sum "${model_path}" | awk '{print $1}')"
+            if [ "${actual_sha}" = "${expected_sha}" ]; then
+                pass "YOLO model checksum matches the tested artifact"
+            else
+                warn "YOLO model exists but checksum differs: ${actual_sha}"
+            fi
+        else
+            fail "YOLO model is missing at ${model_path}"
+        fi
+        ;;
+    *)
+        fail "CG_DETECTOR_BACKEND must be grounded_sam or yolo"
+        ;;
+esac
 
 if command -v rs-enumerate-devices >/dev/null 2>&1 \
     && timeout 5 rs-enumerate-devices -s 2>/dev/null | grep -q 'RealSense D455'; then
