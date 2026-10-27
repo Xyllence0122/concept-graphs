@@ -12,6 +12,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 from visualization_msgs.msg import Marker, MarkerArray
 
+from .relations import SpatialRelationConfig, build_spatial_edges
 from .tracker import Detection3D, ObjectTrack, ObjectTracker
 
 
@@ -36,13 +37,38 @@ class ObjectGraphNode(Node):
         )  # negative means persistent map nodes
         self.declare_parameter("centroid_alpha", 0.25)
         self.declare_parameter("min_observations", 3)
+        self.declare_parameter("enable_spatial_relations", True)
+        self.declare_parameter("relation_near_distance_m", 0.75)
+        self.declare_parameter("relation_max_pair_distance_m", 3.0)
+        self.declare_parameter("relation_horizontal_margin_m", 0.05)
+        self.declare_parameter("relation_vertical_margin_m", 0.05)
+        self.declare_parameter("relation_min_xy_overlap_ratio", 0.10)
 
         self._tracker = ObjectTracker(
             max_match_distance_m=float(
                 self.get_parameter("max_match_distance_m").value
             ),
-            max_missed_frames=int(self.get_parameter("max_missed_frames").value),
+            max_missed_frames=int(
+                self.get_parameter("max_missed_frames").value
+            ),
             centroid_alpha=float(self.get_parameter("centroid_alpha").value),
+        )
+        self._relation_config = SpatialRelationConfig(
+            near_distance_m=float(
+                self.get_parameter("relation_near_distance_m").value
+            ),
+            max_pair_distance_m=float(
+                self.get_parameter("relation_max_pair_distance_m").value
+            ),
+            horizontal_margin_m=float(
+                self.get_parameter("relation_horizontal_margin_m").value
+            ),
+            vertical_margin_m=float(
+                self.get_parameter("relation_vertical_margin_m").value
+            ),
+            min_xy_overlap_ratio=float(
+                self.get_parameter("relation_min_xy_overlap_ratio").value
+            ),
         )
         self._frame_id = ""
 
@@ -67,24 +93,37 @@ class ObjectGraphNode(Node):
         try:
             payload = json.loads(msg.data)
             self._frame_id = str(payload["frame_id"])
-            expected_frame = str(self.get_parameter("expected_frame_id").value)
+            expected_frame = str(
+                self.get_parameter("expected_frame_id").value
+            )
             if self._frame_id != expected_frame:
                 raise ValueError(
-                    f"expected frame {expected_frame!r}, received {self._frame_id!r}"
+                    f"expected frame {expected_frame!r}, "
+                    f"received {self._frame_id!r}"
                 )
-            detections = [self._parse_detection(item) for item in payload["objects"]]
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            detections = [
+                self._parse_detection(item) for item in payload["objects"]
+            ]
+        except (
+            KeyError,
+            TypeError,
+            ValueError,
+            json.JSONDecodeError,
+        ) as error:
             self.get_logger().error(f"Invalid 3D detection JSON: {error}")
             return
 
         tracks = self._tracker.update(detections)
         minimum = max(1, int(self.get_parameter("min_observations").value))
-        confirmed = [track for track in tracks if track.observations >= minimum]
-        self._publish_graph(payload.get("stamp", {}), confirmed)
+        confirmed = [
+            track for track in tracks if track.observations >= minimum
+        ]
+        edge_count = self._publish_graph(payload.get("stamp", {}), confirmed)
         self._publish_markers(confirmed)
         self.get_logger().info(
             f"Graph contains {len(confirmed)} confirmed nodes "
-            f"({len(tracks)} including tentative)"
+            f"and {edge_count} spatial edges "
+            f"({len(tracks)} nodes including tentative)"
         )
 
     @staticmethod
@@ -101,18 +140,30 @@ class ObjectGraphNode(Node):
             source_instance_id=int(item["instance_id"]),
         )
 
-    def _publish_graph(self, stamp: dict[str, Any], tracks: list[ObjectTrack]) -> None:
+    def _publish_graph(
+        self, stamp: dict[str, Any], tracks: list[ObjectTrack]
+    ) -> int:
+        edges = (
+            build_spatial_edges(tracks, self._relation_config)
+            if bool(self.get_parameter("enable_spatial_relations").value)
+            else []
+        )
         graph = {
-            "schema_version": 1,
+            "schema_version": 2,
             "coordinate_frame": self._frame_id,
             "fixed_camera_assumption": False,
+            "relation_frame_convention": {
+                "left_right_axis": "x",
+                "vertical_axis": "z",
+            },
             "stamp": stamp,
             "nodes": [self._track_record(track) for track in tracks],
-            "edges": [],
+            "edges": edges,
         }
         message = String()
         message.data = json.dumps(graph, ensure_ascii=False)
         self._graph_pub.publish(message)
+        return len(edges)
 
     @staticmethod
     def _track_record(track: ObjectTrack) -> dict[str, Any]:
@@ -169,7 +220,10 @@ class ObjectGraphNode(Node):
             text.scale.z = 0.08
             text.color.r = text.color.g = text.color.b = 1.0
             text.color.a = 1.0
-            text.text = f"object_{track.node_id:04d}: {track.label} ({track.observations})"
+            text.text = (
+                f"object_{track.node_id:04d}: {track.label} "
+                f"({track.observations})"
+            )
             text.lifetime = Duration(sec=1)
             output.markers.append(text)
 

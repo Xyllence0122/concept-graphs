@@ -51,6 +51,11 @@ Current ROS outputs include:
 - `/concept_graph/graph/markers`
 - `/rtabmap/cloud_map`
 
+The graph uses schema version 2. Its `edges` contain deterministic map-frame
+spatial relations: `near`, `left_of/right_of`, and `above/below`. Directional
+relations explicitly follow the map X and Z axes rather than a viewer's
+temporary camera perspective.
+
 ## Quick start
 
 The tested native target is x86_64 Ubuntu 24.04 with ROS 2 Jazzy. For the full
@@ -81,7 +86,9 @@ guide.
 
 ## Current limitations
 
-- Graph relation edges are not generated yet.
+- Spatial relation edges currently use axis-aligned 3D bounding boxes and fixed
+  thresholds; semantic support relations such as `on` and `inside` are not yet
+  generated.
 - Duplicate object nodes may appear after drift, occlusion, or loop closure.
 - Dynamic objects such as people are not filtered from the persistent graph.
 - The graph is not yet exported to a durable graph database.

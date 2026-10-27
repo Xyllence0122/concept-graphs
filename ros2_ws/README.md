@@ -20,7 +20,9 @@ D455 RGB + aligned depth
 ```
 
 This is a reproducible prototype, not yet the complete ConceptGraphs paper
-pipeline. In particular, graph relations are not generated yet.
+pipeline. It generates deterministic geometric relations (`near`,
+`left_of/right_of`, and `above/below`), but not learned or language-derived
+relations.
 
 ## Tested compatibility baseline
 
@@ -185,6 +187,11 @@ Important outputs:
 | `/concept_graph/graph/markers` | graph markers for RViz |
 | `/rtabmap/cloud_map` | RTAB-Map point cloud map |
 
+Spatial relation thresholds are configured in
+`src/cg_object_segmentation/config/object_graph.yaml`. Directional relations
+use the map X axis for `left_of/right_of` and the map Z axis for
+`above/below`; they are not relative to the current camera view.
+
 Useful checks:
 
 ```bash
@@ -198,7 +205,8 @@ ros2 topic echo /concept_graph/graph/json --once --full-length
 
 ## Known limitations
 
-- `edges` is currently empty; spatial and semantic relations are not built.
+- Spatial edges are based on axis-aligned bounding boxes and fixed thresholds;
+  `on`, `inside`, and learned semantic relations are not built yet.
 - Association is greedy label-plus-distance tracking, so duplicate object nodes
   can appear after drift, occlusion, or loop closure.
 - Dynamic classes such as `person` are not filtered from the persistent map.

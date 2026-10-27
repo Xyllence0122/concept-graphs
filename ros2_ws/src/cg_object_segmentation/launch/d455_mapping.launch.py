@@ -26,6 +26,11 @@ def _semantic_nodes(context: LaunchContext) -> list[Node]:
         / "config"
         / "yolo_segmentation.yaml"
     )
+    graph_config = (
+        Path(get_package_share_directory("cg_object_segmentation"))
+        / "config"
+        / "object_graph.yaml"
+    )
     ai_site_packages = LaunchConfiguration("yolo_ai_site_packages").perform(
         context
     )
@@ -64,6 +69,7 @@ def _semantic_nodes(context: LaunchContext) -> list[Node]:
             name="object_graph_node",
             output="screen",
             parameters=[
+                str(graph_config),
                 {"expected_frame_id": "map", "max_missed_frames": -1}
             ],
         ),

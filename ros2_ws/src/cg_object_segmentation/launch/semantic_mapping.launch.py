@@ -37,6 +37,11 @@ def _launch_nodes(context: LaunchContext) -> list[Node]:
         / "config"
         / "yolo_segmentation.yaml"
     )
+    graph_config = (
+        Path(get_package_share_directory("cg_object_segmentation"))
+        / "config"
+        / "object_graph.yaml"
+    )
     ai_site_packages = LaunchConfiguration("ai_site_packages").perform(context)
     python_path = os.pathsep.join(
         value
@@ -77,6 +82,7 @@ def _launch_nodes(context: LaunchContext) -> list[Node]:
             name="object_graph_node",
             output="screen",
             parameters=[
+                str(graph_config),
                 {
                     "expected_frame_id": target_frame,
                     "max_missed_frames": -1,

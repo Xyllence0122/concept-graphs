@@ -1,0 +1,8 @@
+object_graph_node:
+  ros__parameters:
+    enable_spatial_relations: true
+    relation_near_distance_m: 0.75
+    relation_max_pair_distance_m: 3.0
+    relation_horizontal_margin_m: 0.05
+    relation_vertical_margin_m: 0.05
+    relation_min_xy_overlap_ratio: 0.10
