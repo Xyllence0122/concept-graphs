@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "run_name": "lab_smoke_2026-10-29_01",
+  "frame_count": 38,
+  "max_depth_m": 5.0,
+  "depth_unit": "millimeter",
+  "median_valid_depth_ratio": 0.732212,
+  "pose_input_convention": "RTAB-Map map_T_camera_optical",
+  "translation_bounds_m": {
+    "min": [-0.144362, -0.324951, -0.001784],
+    "max": [0.004273, 0.021261, 0.249179]
+  }
+}

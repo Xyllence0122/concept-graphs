@@ -15,6 +15,7 @@ from being confused with the current ROS 2 Jazzy workspace.
 | Path | Purpose |
 | --- | --- |
 | [`ros2_ws/`](ros2_ws/) | Current ROS 2 D455 semantic-mapping implementation |
+| [`offline_tools/`](offline_tools/) | RTAB-Map export, ConceptGraphs dataset conversion, and geometry validation tools |
 | [`log/`](log/) | One dated Markdown file per development session |
 | [`.github/workflows/ros2-jazzy.yml`](.github/workflows/ros2-jazzy.yml) | Ubuntu 24.04 / ROS 2 Jazzy build and test workflow |
 | [`upstream_concept_graphs/`](upstream_concept_graphs/) | Preserved original ConceptGraphs research code and documentation |

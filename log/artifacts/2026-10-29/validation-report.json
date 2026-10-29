@@ -1,0 +1,25 @@
+{
+  "frame_count": 38,
+  "sampled_frame_count": 38,
+  "point_count": 124732,
+  "pixel_step": 8,
+  "frame_step": 1,
+  "bounds_m": {
+    "min": [0.18022899329662323, -4.422624111175537, -2.711456060409546],
+    "max": [5.3923540115356445, 5.282556056976318, 3.0668859481811523]
+  },
+  "topdown_projection": {
+    "axis_indices": [0, 1],
+    "lower_m": [0.215477, -2.532386],
+    "upper_m": [3.153547, 4.386526],
+    "meters_per_pixel": 0.01,
+    "image_size": [295, 693]
+  },
+  "side_projection": {
+    "axis_indices": [0, 2],
+    "lower_m": [0.215477, -0.401621],
+    "upper_m": [3.153547, 2.351249],
+    "meters_per_pixel": 0.01,
+    "image_size": [295, 277]
+  }
+}
