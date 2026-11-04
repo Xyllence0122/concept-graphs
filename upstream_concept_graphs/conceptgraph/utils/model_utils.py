@@ -105,13 +105,13 @@ def compute_clip_features(image, detections, clip_model, clip_preprocess, clip_t
         cropped_image = image.crop((x_min, y_min, x_max, y_max))
         
         # Get the preprocessed image for clip from the crop 
-        preprocessed_image = clip_preprocess(cropped_image).unsqueeze(0).to("cuda")
+        preprocessed_image = clip_preprocess(cropped_image).unsqueeze(0).to(device)
 
         crop_feat = clip_model.encode_image(preprocessed_image)
         crop_feat /= crop_feat.norm(dim=-1, keepdim=True)
         
         class_id = detections.class_id[idx]
-        tokenized_text = clip_tokenizer([classes[class_id]]).to("cuda")
+        tokenized_text = clip_tokenizer([classes[class_id]]).to(device)
         text_feat = clip_model.encode_text(tokenized_text)
         text_feat /= text_feat.norm(dim=-1, keepdim=True)
         

@@ -316,6 +316,23 @@ def main() -> None:
     with (output_dir / "camera_config.yaml").open("w", encoding="utf-8") as handle:
         yaml.safe_dump(dataset_config, handle, sort_keys=False)
 
+    # The preserved upstream loader converts the RGB image to a Torch tensor
+    # before calling cv2.undistort(), and it never applies the matching warp to
+    # aligned depth.  Keep the measured coefficients in camera_config.yaml for
+    # provenance, but provide a pixel-aligned config for the official pipeline.
+    conceptgraphs_config = {
+        "dataset_name": dataset_config["dataset_name"],
+        "camera_params": {
+            key: value
+            for key, value in dataset_config["camera_params"].items()
+            if key != "distortion"
+        },
+    }
+    with (output_dir / "camera_config_conceptgraphs.yaml").open(
+        "w", encoding="utf-8"
+    ) as handle:
+        yaml.safe_dump(conceptgraphs_config, handle, sort_keys=False)
+
     translations = np.stack(ros_translations)
     manifest = {
         "schema_version": 1,

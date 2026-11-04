@@ -109,8 +109,29 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--nms_threshold", type=float, default=0.5)
 
     parser.add_argument("--class_set", type=str, default="scene", 
-                        choices=["scene", "generic", "minimal", "tag2text", "ram", "none"], 
+                        choices=["scene", "generic", "minimal", "custom", "tag2text", "ram", "none"],
                         help="If none, no tagging and detection will be used and the SAM will be run in dense sampling mode. ")
+    parser.add_argument(
+        "--custom_classes",
+        nargs="+",
+        default=None,
+        help=(
+            "Explicit open-vocabulary class names used when --class_set custom. "
+            "Quote names containing spaces, for example: "
+            "--custom_classes 'cardboard box' 'whiteboard eraser'."
+        ),
+    )
+    parser.add_argument(
+        "--extra_classes",
+        nargs="*",
+        default=[],
+        help=(
+            "Additional open-vocabulary classes appended to automatic RAM/"
+            "Tag2Text classes (or the selected fixed class set). Use this to "
+            "guarantee scene-specific targets that an automatic tagger may "
+            "miss, for example --extra_classes \"Rubik's cube\" table."
+        ),
+    )
     parser.add_argument("--detector", type=str, default="dino", 
                         choices=["yolo", "dino"], 
                         help="When given classes, whether to use YOLO-World or GroundingDINO to detect objects. ")
@@ -125,6 +146,16 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save_video", action="store_true")
     
     parser.add_argument("--device", type=str, default="cuda")
+
+    parser.add_argument(
+        "--low_vram",
+        action="store_true",
+        help=(
+            "Keep models on CPU and move only the model currently doing inference "
+            "to the selected device. This reduces peak VRAM usage at the cost of "
+            "additional CPU/GPU transfers."
+        ),
+    )
     
     parser.add_argument("--use_slow_vis", action="store_true", 
                         help="If set, use vis_result_slow_caption. Only effective when using ram/tag2text. ")
@@ -302,25 +333,41 @@ def process_ai2thor_classes(classes: List[str], add_classes:List[str]=[], remove
     
     
 def main(args: argparse.Namespace):
-    ### Initialize the Grounding DINO model ###
-    grounding_dino_model = Model(
-        model_config_path=GROUNDING_DINO_CONFIG_PATH, 
-        model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH, 
-        device=args.device
+    model_init_device = "cpu" if args.low_vram else args.device
+    extra_classes = list(
+        dict.fromkeys(value.strip() for value in args.extra_classes if value.strip())
     )
+
+    def clear_cuda_cache() -> None:
+        if args.low_vram and str(args.device).startswith("cuda"):
+            torch.cuda.empty_cache()
+
+    def move_grounding_dino(device: str) -> None:
+        grounding_dino_model.model.to(device)
+        grounding_dino_model.device = device
+
+    ### Initialize Grounding DINO only when box-conditioned detection is used. ###
+    grounding_dino_model = None
+    if args.class_set != "none" and args.detector == "dino":
+        grounding_dino_model = Model(
+            model_config_path=GROUNDING_DINO_CONFIG_PATH,
+            model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH,
+            device=model_init_device,
+        )
 
     ### Initialize the SAM model ###
     if args.class_set == "none":
-        mask_generator = get_sam_mask_generator(args.sam_variant, args.device)
+        mask_generator = get_sam_mask_generator(args.sam_variant, model_init_device)
     else:
-        sam_predictor = get_sam_predictor(args.sam_variant, args.device)
+        sam_predictor = get_sam_predictor(args.sam_variant, model_init_device)
     
     ###
     # Initialize the CLIP model
     clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
         "ViT-H-14", "laion2b_s32b_b79k"
     )
-    clip_model = clip_model.to(args.device)
+    if not args.low_vram:
+        clip_model = clip_model.to(args.device)
     clip_tokenizer = open_clip.get_tokenizer("ViT-H-14")
     
     # Initialize the dataset
@@ -359,6 +406,14 @@ def main(args: argparse.Namespace):
         classes = FOREGROUND_GENERIC_CLASSES
     elif args.class_set == "minimal":
         classes = FOREGROUND_MINIMAL_CLASSES
+    elif args.class_set == "custom":
+        if not args.custom_classes:
+            raise ValueError(
+                "--custom_classes must contain at least one class when "
+                "--class_set custom is selected."
+            )
+        # Preserve command-line order while removing accidental duplicates.
+        classes = list(dict.fromkeys([*args.custom_classes, *extra_classes]))
     elif args.class_set in ["tag2text", "ram"]:
         ### Initialize the Tag2Text or RAM model ###
         
@@ -383,7 +438,9 @@ def main(args: argparse.Namespace):
                                          image_size=384,
                                          vit='swin_l')
             
-        tagging_model = tagging_model.eval().to(args.device)
+        tagging_model = tagging_model.eval()
+        if not args.low_vram:
+            tagging_model = tagging_model.to(args.device)
         
         # initialize Tag2Text
         tagging_transform = TS.Compose([
@@ -398,6 +455,9 @@ def main(args: argparse.Namespace):
         classes = ['item']
     else:
         raise ValueError("Unknown args.class_set: ", args.class_set)
+
+    if args.class_set not in ["ram", "tag2text", "none", "custom"]:
+        classes = list(dict.fromkeys([*classes, *extra_classes]))
 
     if args.class_set not in ["ram", "tag2text"]:
         print("There are total", len(classes), "classes to detect. ")
@@ -440,6 +500,9 @@ def main(args: argparse.Namespace):
         
         ### Tag2Text ###
         if args.class_set in ["ram", "tag2text"]:
+            if args.low_vram:
+                tagging_model = tagging_model.to(args.device)
+
             raw_image = image_pil.resize((384, 384))
             raw_image = tagging_transform(raw_image).unsqueeze(0).to(args.device)
             
@@ -450,6 +513,11 @@ def main(args: argparse.Namespace):
                 res = inference_tag2text.inference(raw_image , tagging_model, specified_tags)
                 caption=res[2]
 
+            if args.low_vram:
+                del raw_image
+                tagging_model = tagging_model.to("cpu")
+                clear_cuda_cache()
+
             # Currently ", " is better for detecting single tags
             # while ". " is a little worse in some case
             text_prompt=res[0].replace(' |', ',')
@@ -457,7 +525,7 @@ def main(args: argparse.Namespace):
             # Add "other item" to capture objects not in the tag2text captions. 
             # Remove "xxx room", otherwise it will simply include the entire image
             # Also hide "wall" and "floor" for now...
-            add_classes = ["other item"]
+            add_classes = ["other item", *extra_classes]
             remove_classes = [
                 "room", "kitchen", "office", "house", "home", "building", "corner",
                 "shadow", "carpet", "photo", "shade", "stall", "space", "aquarium", 
@@ -487,16 +555,32 @@ def main(args: argparse.Namespace):
         ### Detection and segmentation ###
         if args.class_set == "none":
             # Directly use SAM in dense sampling mode to get segmentation
+            if args.low_vram:
+                mask_generator.model.to(args.device)
+
             mask, xyxy, conf = get_sam_segmentation_dense(
                 args.sam_variant, mask_generator, image_rgb)
+
+            if args.low_vram:
+                mask_generator.model.to("cpu")
+                clear_cuda_cache()
+
             detections = sv.Detections(
                 xyxy=xyxy,
                 confidence=conf,
                 class_id=np.zeros_like(conf).astype(int),
                 mask=mask,
             )
+
+            if args.low_vram:
+                clip_model = clip_model.to(args.device)
+
             image_crops, image_feats, text_feats = compute_clip_features(
                 image_rgb, detections, clip_model, clip_preprocess, clip_tokenizer, classes, args.device)
+
+            if args.low_vram:
+                clip_model = clip_model.to("cpu")
+                clear_cuda_cache()
 
             ### Visualize results ###
             annotated_image, labels = vis_result_fast(
@@ -506,12 +590,19 @@ def main(args: argparse.Namespace):
         else:
             if args.detector == "dino":
                 # Using GroundingDINO to detect and SAM to segment
+                if args.low_vram:
+                    move_grounding_dino(args.device)
+
                 detections = grounding_dino_model.predict_with_classes(
                     image=image, # This function expects a BGR image...
                     classes=classes,
                     box_threshold=args.box_threshold,
                     text_threshold=args.text_threshold,
                 )
+
+                if args.low_vram:
+                    move_grounding_dino("cpu")
+                    clear_cuda_cache()
             
                 if len(detections.class_id) > 0:
                     ### Non-maximum suppression ###
@@ -559,15 +650,30 @@ def main(args: argparse.Namespace):
             if len(detections.class_id) > 0:
                 
                 ### Segment Anything ###
+                if args.low_vram:
+                    sam_predictor.model.to(args.device)
+
                 detections.mask = get_sam_segmentation_from_xyxy(
                     sam_predictor=sam_predictor,
                     image=image_rgb,
                     xyxy=detections.xyxy
                 )
 
+                if args.low_vram:
+                    sam_predictor.reset_image()
+                    sam_predictor.model.to("cpu")
+                    clear_cuda_cache()
+
                 # Compute and save the clip features of detections  
+                if args.low_vram:
+                    clip_model = clip_model.to(args.device)
+
                 image_crops, image_feats, text_feats = compute_clip_features(
                     image_rgb, detections, clip_model, clip_preprocess, clip_tokenizer, classes, args.device)
+
+                if args.low_vram:
+                    clip_model = clip_model.to("cpu")
+                    clear_cuda_cache()
             else:
                 image_crops, image_feats, text_feats = [], [], []
             
