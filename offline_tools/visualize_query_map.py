@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import colorsys
 from dataclasses import dataclass
 import json
@@ -48,6 +49,46 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--point-size", type=float, default=4.0)
     parser.add_argument("--scene-point-size", type=float, default=2.0)
     parser.add_argument("--scene-voxel-size", type=float, default=0.025)
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=5,
+        help="Number of ranked semantic candidates to overlay (default: 5).",
+    )
+    parser.add_argument(
+        "--min-observations",
+        type=int,
+        default=5,
+        help="Hide candidates seen fewer times than this (default: 5).",
+    )
+    parser.add_argument(
+        "--min-object-points",
+        type=int,
+        default=50,
+        help="Hide candidates with fewer 3D points (default: 50).",
+    )
+    parser.add_argument(
+        "--min-label-purity",
+        type=float,
+        default=0.60,
+        help="Minimum majority-label vote ratio in [0, 1] (default: 0.60).",
+    )
+    parser.add_argument(
+        "--show-all-objects",
+        action="store_true",
+        help="Initially overlay every object instead of only top candidates.",
+    )
+    parser.add_argument(
+        "--show-boxes",
+        action="store_true",
+        help="Initially show object bounding boxes.",
+    )
+    parser.add_argument(
+        "--scene-brightness",
+        type=float,
+        default=0.72,
+        help="RGB scene brightness multiplier in [0, 1] (default: 0.72).",
+    )
     parser.add_argument("--width", type=int, default=1440)
     parser.add_argument("--height", type=int, default=900)
     parser.add_argument("--screenshot-path", type=Path)
@@ -195,6 +236,7 @@ class QueryMapWindow:
         self.object_clouds: list[Any] = []
         self.object_boxes: list[Any] = []
         self.active_relation_name = "active_relation"
+        self.current_result: QueryResult | None = None
 
         app = gui.Application.instance
         app.initialize()
@@ -216,6 +258,14 @@ class QueryMapWindow:
         self.search_button = gui.Button("Find object")
         self.search_button.set_on_clicked(self._on_search)
         self.panel.add_child(self.search_button)
+        self.show_all_checkbox = gui.Checkbox("Show all object candidates")
+        self.show_all_checkbox.checked = args.show_all_objects
+        self.show_all_checkbox.set_on_checked(self._on_display_option_changed)
+        self.panel.add_child(self.show_all_checkbox)
+        self.show_boxes_checkbox = gui.Checkbox("Show bounding boxes")
+        self.show_boxes_checkbox.checked = args.show_boxes
+        self.show_boxes_checkbox.set_on_checked(self._on_display_option_changed)
+        self.panel.add_child(self.show_boxes_checkbox)
         self.result_label = gui.Label("Ready")
         self.panel.add_child(self.result_label)
         self.evidence_label = gui.Label("")
@@ -259,7 +309,7 @@ class QueryMapWindow:
         colors = np.asarray(cloud.colors)
         if len(colors) == len(cloud.points):
             cloud.colors = self.o3d.utility.Vector3dVector(
-                np.clip(colors * 0.42 + 0.04, 0.0, 1.0)
+                np.clip(colors * self.args.scene_brightness + 0.03, 0.0, 1.0)
             )
         self.scene_widget.scene.add_geometry(
             "rgb_scene",
@@ -294,22 +344,84 @@ class QueryMapWindow:
         box.paint_uniform_color(color.tolist())
         return box
 
-    def _replace_object(self, index: int, color: np.ndarray) -> None:
+    def _remove_object(self, index: int) -> None:
         cloud_name = f"object_{index:04d}"
         box_name = f"bbox_{index:04d}"
         for name in (cloud_name, box_name):
             if self.scene_widget.scene.has_geometry(name):
                 self.scene_widget.scene.remove_geometry(name)
+
+    def _clear_object_overlays(self) -> None:
+        for index in range(len(self.objects)):
+            self._remove_object(index)
+
+    def _replace_object(self, index: int, color: np.ndarray) -> None:
+        cloud_name = f"object_{index:04d}"
+        box_name = f"bbox_{index:04d}"
+        self._remove_object(index)
         self.scene_widget.scene.add_geometry(
             cloud_name,
             self._colored_cloud(index, color),
             self._point_material(self.args.point_size),
         )
-        self.scene_widget.scene.add_geometry(
-            box_name,
-            self._colored_box(index, color),
-            self._line_material(2.0),
+        if self.show_boxes_checkbox.checked:
+            self.scene_widget.scene.add_geometry(
+                box_name,
+                self._colored_box(index, color),
+                self._line_material(2.0),
+            )
+
+    def _observation_count(self, index: int) -> int:
+        obj = self.objects[index]
+        return int(obj.get("num_detections", len(obj.get("conf", [])) or 1))
+
+    def _point_count(self, index: int) -> int:
+        return len(self.objects[index]["pcd_np"])
+
+    def _label_purity(self, index: int) -> float:
+        labels = self.objects[index].get("class_name", [])
+        if isinstance(labels, str):
+            labels = [labels]
+        labels = list(labels)
+        if not labels:
+            return 0.0
+        return Counter(labels).most_common(1)[0][1] / len(labels)
+
+    def _passes_quality_gate(self, index: int) -> bool:
+        return (
+            self._observation_count(index) >= self.args.min_observations
+            and self._point_count(index) >= self.args.min_object_points
+            and self._label_purity(index) >= self.args.min_label_purity
         )
+
+    def _apply_quality_gate(self, result: QueryResult) -> QueryResult:
+        if result.support_id is not None or result.scores is None:
+            return result
+        ranked = np.argsort(np.asarray(result.scores))[::-1].astype(int).tolist()
+        qualified = [index for index in ranked if self._passes_quality_gate(index)]
+        if not qualified:
+            return result
+        best_index = qualified[0]
+        result.object_id = best_index
+        result.label = self.labels[best_index]
+        result.score = float(result.scores[best_index])
+        return result
+
+    def _ranked_indices(self, result: QueryResult) -> list[int]:
+        if result.support_id is not None:
+            return list(dict.fromkeys([result.object_id, result.support_id]))
+
+        if result.scores is None:
+            ranked = [result.object_id]
+        else:
+            ranked = np.argsort(np.asarray(result.scores))[::-1].astype(int).tolist()
+
+        filtered = [index for index in ranked if self._passes_quality_gate(index)]
+        if not filtered:
+            filtered = [result.object_id]
+        if self.show_all_checkbox.checked:
+            return filtered
+        return filtered[: self.args.top_k]
 
     def _render_relation(self, result: QueryResult) -> None:
         if self.scene_widget.scene.has_geometry(self.active_relation_name):
@@ -334,6 +446,12 @@ class QueryMapWindow:
         )
 
     def _render_result(self, result: QueryResult) -> None:
+        result = self._apply_quality_gate(result)
+        self.current_result = result
+        self._clear_object_overlays()
+        if self.scene_widget.scene.has_geometry(self.active_relation_name):
+            self.scene_widget.scene.remove_geometry(self.active_relation_name)
+
         similarity_colors = None
         if result.method == "CLIP" and result.scores is not None:
             import matplotlib
@@ -346,7 +464,8 @@ class QueryMapWindow:
                 normalized = np.ones_like(scores)
             similarity_colors = matplotlib.colormaps["viridis"](normalized)[:, :3]
 
-        for index in range(len(self.objects)):
+        ranked_indices = self._ranked_indices(result)
+        for index in ranked_indices:
             color = (
                 similarity_colors[index]
                 if similarity_colors is not None
@@ -354,7 +473,7 @@ class QueryMapWindow:
             )
             if index == result.support_id:
                 color = SUPPORT_COLOR
-            if index == result.object_id and similarity_colors is None:
+            if index == result.object_id:
                 color = HIGHLIGHT_COLOR
             self._replace_object(index, color)
         self._render_relation(result)
@@ -363,7 +482,19 @@ class QueryMapWindow:
             self.result_label.text = (
                 f"Match: {result.label}  |  {result.method} score {result.score:.3f}"
             )
-            self.evidence_label.text = "No stored spatial relation was required."
+            candidate_lines = []
+            for rank, index in enumerate(ranked_indices[: self.args.top_k], start=1):
+                score = (
+                    float(result.scores[index])
+                    if result.scores is not None
+                    else (result.score if index == result.object_id else 0.0)
+                )
+                candidate_lines.append(
+                    f"{rank}. object_{index:04d} | {self.labels[index]} | "
+                    f"{score:.3f} | obs {self._observation_count(index)} | "
+                    f"purity {self._label_purity(index):.2f}"
+                )
+            self.evidence_label.text = "Top candidates\n" + "\n".join(candidate_lines)
             return
 
         evidence = result.relation.get("evidence", {})
@@ -374,9 +505,14 @@ class QueryMapWindow:
             f"Match: {result.label} --on--> {result.support_label}"
         )
         self.evidence_label.text = (
-            f"Relation graph | contact gap {gap_mm:.1f} mm | "
+            f"object_{result.object_id:04d} -> object_{result.support_id:04d}\n"
+            f"Verified relation graph\ncontact gap {gap_mm:.1f} mm | "
             f"support overlap {overlap:.1f}%"
         )
+
+    def _on_display_option_changed(self, _checked: bool) -> None:
+        if self.current_result is not None:
+            self._render_result(self.current_result)
 
     def _on_search(self) -> None:
         query = self.query_edit.text_value.strip()
@@ -431,6 +567,16 @@ def main() -> None:
     args = parse_arguments()
     if args.point_size <= 0 or args.scene_point_size <= 0:
         raise ValueError("point sizes must be positive")
+    if args.top_k <= 0:
+        raise ValueError("--top-k must be positive")
+    if args.min_observations < 1:
+        raise ValueError("--min-observations must be at least 1")
+    if args.min_object_points < 1:
+        raise ValueError("--min-object-points must be at least 1")
+    if not 0.0 <= args.min_label_purity <= 1.0:
+        raise ValueError("--min-label-purity must be in [0, 1]")
+    if not 0.0 <= args.scene_brightness <= 1.0:
+        raise ValueError("--scene-brightness must be in [0, 1]")
     QueryMapWindow(args).run()
 
 

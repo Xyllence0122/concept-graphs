@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "coordinate_frame": "map",
+  "map_file": "/home/max/Concept Graph/concept_graph_data/conceptgraphs_datasets/lab_static_full_2026-11-04_02/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz",
+  "query": {
+    "subject_label": "Rubik's cube",
+    "subject_id": 36,
+    "relation": "on",
+    "support_label": "table",
+    "support_id": 38
+  },
+  "candidate_count": 1,
+  "relation_count": 1,
+  "relations": [
+    {
+      "source_id": "object_0036",
+      "target_id": "object_0038",
+      "source_label": "Rubik's cube",
+      "target_label": "table",
+      "relation": "on",
+      "directed": true,
+      "accepted": true,
+      "checks": {
+        "support_plane": true,
+        "contact_gap": true,
+        "subject_above_plane": true,
+        "footprint_overlap": true
+      },
+      "evidence": {
+        "support_plane_normal": [
+          -0.12443,
+          0.120297,
+          0.984909
+        ],
+        "support_plane_offset": 0.106939,
+        "support_plane_inlier_ratio": 0.818182,
+        "support_plane_point_count": 1926,
+        "subject_point_count": 64,
+        "subject_points_inside_support": 64,
+        "footprint_overlap_ratio": 1.0,
+        "subject_plane_distance_m": {
+          "q01": 0.003599,
+          "q05_contact_gap": 0.009274,
+          "q50_median_height": 0.044877,
+          "q95": 0.069093,
+          "q99": 0.07277
+        },
+        "thresholds": {
+          "plane_distance_m": 0.02,
+          "min_plane_inlier_ratio": 0.3,
+          "min_footprint_overlap": 0.5,
+          "max_contact_gap_m": 0.04,
+          "max_penetration_m": 0.03,
+          "min_median_height_m": 0.01,
+          "max_median_height_m": 0.5
+        }
+      },
+      "source_map_label": "Rubik's cube",
+      "target_map_label": "Rubik's cube"
+    }
+  ],
+  "candidates": [
+    {
+      "source_id": "object_0036",
+      "target_id": "object_0038",
+      "source_label": "Rubik's cube",
+      "target_label": "table",
+      "relation": "on",
+      "directed": true,
+      "accepted": true,
+      "checks": {
+        "support_plane": true,
+        "contact_gap": true,
+        "subject_above_plane": true,
+        "footprint_overlap": true
+      },
+      "evidence": {
+        "support_plane_normal": [
+          -0.12443,
+          0.120297,
+          0.984909
+        ],
+        "support_plane_offset": 0.106939,
+        "support_plane_inlier_ratio": 0.818182,
+        "support_plane_point_count": 1926,
+        "subject_point_count": 64,
+        "subject_points_inside_support": 64,
+        "footprint_overlap_ratio": 1.0,
+        "subject_plane_distance_m": {
+          "q01": 0.003599,
+          "q05_contact_gap": 0.009274,
+          "q50_median_height": 0.044877,
+          "q95": 0.069093,
+          "q99": 0.07277
+        },
+        "thresholds": {
+          "plane_distance_m": 0.02,
+          "min_plane_inlier_ratio": 0.3,
+          "min_footprint_overlap": 0.5,
+          "max_contact_gap_m": 0.04,
+          "max_penetration_m": 0.03,
+          "min_median_height_m": 0.01,
+          "max_median_height_m": 0.5
+        }
+      },
+      "source_map_label": "Rubik's cube",
+      "target_map_label": "Rubik's cube"
+    }
+  ]
+}

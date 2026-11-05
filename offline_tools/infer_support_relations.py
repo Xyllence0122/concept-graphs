@@ -27,6 +27,22 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--map-file", type=Path, required=True)
     parser.add_argument("--subject-label", required=True)
     parser.add_argument("--support-label", required=True)
+    parser.add_argument(
+        "--subject-id",
+        type=int,
+        help=(
+            "Use one verified object index as the subject instead of selecting "
+            "all objects whose majority label matches --subject-label."
+        ),
+    )
+    parser.add_argument(
+        "--support-id",
+        type=int,
+        help=(
+            "Use one verified object index as the support instead of selecting "
+            "all objects whose majority label matches --support-label."
+        ),
+    )
     parser.add_argument("--frame-id", default="map")
     parser.add_argument("--plane-distance-threshold-m", type=float, default=0.02)
     parser.add_argument("--ransac-iterations", type=int, default=3000)
@@ -267,16 +283,31 @@ def main() -> None:
     labels = [most_common_label(obj) for obj in objects]
     subject_query = normalized_label(args.subject_label)
     support_query = normalized_label(args.support_label)
-    subject_ids = [
-        index
-        for index, label in enumerate(labels)
-        if normalized_label(label) == subject_query
-    ]
-    support_ids = [
-        index
-        for index, label in enumerate(labels)
-        if normalized_label(label) == support_query
-    ]
+    if args.subject_id is not None:
+        if not 0 <= args.subject_id < len(objects):
+            raise ValueError(
+                f"--subject-id must be between 0 and {len(objects) - 1}"
+            )
+        subject_ids = [args.subject_id]
+    else:
+        subject_ids = [
+            index
+            for index, label in enumerate(labels)
+            if normalized_label(label) == subject_query
+        ]
+
+    if args.support_id is not None:
+        if not 0 <= args.support_id < len(objects):
+            raise ValueError(
+                f"--support-id must be between 0 and {len(objects) - 1}"
+            )
+        support_ids = [args.support_id]
+    else:
+        support_ids = [
+            index
+            for index, label in enumerate(labels)
+            if normalized_label(label) == support_query
+        ]
     if not subject_ids:
         raise ValueError(f"no object has subject label {args.subject_label!r}")
     if not support_ids:
@@ -288,6 +319,16 @@ def main() -> None:
         for support_id in support_ids
         if subject_id != support_id
     ]
+    for candidate in candidates:
+        # Preserve the automatic map labels as provenance while emitting the
+        # user-verified semantic labels requested on the command line.  This is
+        # important when an otherwise valid support surface has a noisy
+        # majority label in the automatically fused map.
+        candidate["source_map_label"] = candidate["source_label"]
+        candidate["target_map_label"] = candidate["target_label"]
+        candidate["source_label"] = args.subject_label
+        candidate["target_label"] = args.support_label
+
     relations = [candidate for candidate in candidates if candidate["accepted"]]
     result = {
         "schema_version": 1,
@@ -295,8 +336,10 @@ def main() -> None:
         "map_file": str(map_path),
         "query": {
             "subject_label": args.subject_label,
+            "subject_id": args.subject_id,
             "relation": "on",
             "support_label": args.support_label,
+            "support_id": args.support_id,
         },
         "candidate_count": len(candidates),
         "relation_count": len(relations),

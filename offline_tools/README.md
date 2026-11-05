@@ -229,6 +229,22 @@ relative height, footprint overlap, and thresholds preserved as evidence.
 This geometric relation assumes that the support object contains a dominant
 supporting plane; it is not appropriate for arbitrary non-planar containers.
 
+When automatic fusion creates duplicate or noisy majority labels, first verify
+the instances from their source RGB frames and then select the exact object
+indices explicitly.  The requested semantic labels are written to the edge,
+while the original automatic labels remain as provenance:
+
+```bash
+python offline_tools/infer_support_relations.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz" \
+  --subject-label "Rubik's cube" \
+  --support-label table \
+  --subject-id 36 \
+  --support-id 38 \
+  --require-match \
+  --output-json "$SCENE/relations/rubiks_cube_on_table.json"
+```
+
 ## 6. Visualize text-query results
 
 The local query viewer combines the reconstructed RGB point cloud, semantic
@@ -246,15 +262,40 @@ python offline_tools/visualize_query_map.py \
   --screenshot-path "$SCENE/visualizations/panda_on_table.png"
 ```
 
-The matched object is yellow, its supporting object is cyan, other semantic
-objects use distinct instance colors, and the reconstructed RGB scene is
-dimmed in the background.
+The matched object is yellow and its supporting object is cyan.  The RGB
+reconstruction remains visible as scene context, while the default query view
+overlays only the top five candidates.  A relation query overlays only its two
+participating nodes.  Use the in-window checkboxes when all candidates or
+their bounding boxes are needed for diagnosis; both are hidden by default to
+avoid obscuring the scene.
 `auto` mode resolves stored relation queries first and falls back to label
 matching. Use `--mode clip` for open-vocabulary CLIP retrieval when the query
-does not require an explicit graph edge. CLIP mode colors every object by
-similarity from purple/blue (low) to yellow (high), matching the paper demo's
-query heatmap. The screenshot button stores the current 3D view at the
-requested path.
+does not require an explicit graph edge. CLIP mode ranks every node but only
+draws the top candidates, colored by similarity, with the best match forced to
+yellow. The screenshot button stores the current 3D view at the requested
+path. The default static-map quality gate requires five observations, 50 3D
+points, and 0.60 majority-label purity. `--top-k`, `--min-observations`,
+`--min-object-points`, `--min-label-purity`, `--show-all-objects`,
+`--show-boxes`, and `--scene-brightness` control the presentation and
+diagnostic filtering.
+
+For the verified full-lab Rubik's-cube relation:
+
+```bash
+SCENE="$HOME/Concept Graph/concept_graph_data/conceptgraphs_datasets/lab_static_full_2026-11-04_02"
+
+python offline_tools/visualize_query_map.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz" \
+  --scene-cloud "$SCENE/validation/fused_preview.ply" \
+  --relations-file "$SCENE/relations/rubiks_cube_on_table.json" \
+  --query "find the Rubik's cube on the table" \
+  --mode auto \
+  --top-k 5 \
+  --min-observations 5 \
+  --min-object-points 50 \
+  --min-label-purity 0.60 \
+  --screenshot-path "$SCENE/visualizations/rubiks_cube_official_style.png"
+```
 
 ## Upstream PyTorch compatibility
 
