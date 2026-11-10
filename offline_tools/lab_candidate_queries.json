@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "scene_id": "lab_static_full_2026-11-04_02",
+  "queries": [
+    {
+      "query_id": "panda_plush_toy",
+      "text": "a panda plush toy",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "whiteboard_eraser",
+      "text": "a whiteboard eraser",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "cardboard_box",
+      "text": "a cardboard box",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "computer_monitor",
+      "text": "a computer monitor",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "office_chair",
+      "text": "an office chair",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "water_bottle",
+      "text": "a reusable water bottle",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "mug",
+      "text": "a coffee mug",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "microscope",
+      "text": "a laboratory microscope",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    },
+    {
+      "query_id": "table",
+      "text": "a laboratory work table",
+      "expected_object_ids": [],
+      "notes": "Candidate discovery; source frames still require verification."
+    }
+  ]
+}

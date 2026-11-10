@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "scene_id": "lab_static_full_2026-11-04_02",
+  "queries": [
+    {
+      "query_id": "rubiks_cube_literal",
+      "text": "a Rubik's cube",
+      "expected_object_ids": [36],
+      "notes": "Verified in source RGB frames 12-16."
+    },
+    {
+      "query_id": "rubiks_cube_colored_cube",
+      "text": "a small colorful cube on a table",
+      "expected_object_ids": [36],
+      "notes": "Descriptive query without the product name."
+    },
+    {
+      "query_id": "rubiks_cube_twisty_puzzle",
+      "text": "a colorful twisty puzzle",
+      "expected_object_ids": [36],
+      "notes": "Open-vocabulary synonym query."
+    },
+    {
+      "query_id": "rubiks_cube_rotating_faces",
+      "text": "a puzzle with rotating colored faces",
+      "expected_object_ids": [36],
+      "notes": "Functional visual description."
+    },
+    {
+      "query_id": "rubiks_cube_color_matching",
+      "text": "something used as a color-matching puzzle",
+      "expected_object_ids": [36],
+      "notes": "Affordance-style query."
+    }
+  ]
+}

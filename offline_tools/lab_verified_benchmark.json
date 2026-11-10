@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "scene_id": "lab_static_full_2026-11-04_02",
+  "verification_method": "Source RGB frames with stored masks and boxes",
+  "queries": [
+    {
+      "query_id": "rubiks_cube_literal",
+      "text": "a Rubik's cube",
+      "expected_object_ids": [36],
+      "notes": "object_0036 verified in frames 12-16."
+    },
+    {
+      "query_id": "rubiks_cube_description",
+      "text": "a puzzle with rotating colored faces",
+      "expected_object_ids": [36],
+      "notes": "Open-vocabulary description of object_0036."
+    },
+    {
+      "query_id": "panda_literal",
+      "text": "a panda plush toy",
+      "expected_object_ids": [1],
+      "notes": "object_0001 is the panda; object_0009 is primarily the mat."
+    },
+    {
+      "query_id": "panda_description",
+      "text": "a black and white stuffed animal",
+      "expected_object_ids": [1],
+      "notes": "Open-vocabulary description of object_0001."
+    },
+    {
+      "query_id": "cardboard_box_literal",
+      "text": "a cardboard box",
+      "expected_object_ids": [0, 281],
+      "notes": "Both ids are visually verified boxes in different lab locations."
+    },
+    {
+      "query_id": "cardboard_box_description",
+      "text": "a corrugated shipping carton",
+      "expected_object_ids": [0, 281],
+      "notes": "Descriptive query for the verified boxes."
+    },
+    {
+      "query_id": "monitor_literal",
+      "text": "a computer monitor",
+      "expected_object_ids": [50, 62, 64, 167],
+      "notes": "All four ids contain source-frame-verified computer displays."
+    },
+    {
+      "query_id": "monitor_description",
+      "text": "a screen displaying computer code",
+      "expected_object_ids": [50, 62, 64, 167],
+      "notes": "object_0062 is source-frame-verified with code visible on screen."
+    },
+    {
+      "query_id": "office_chair_literal",
+      "text": "an office chair",
+      "expected_object_ids": [63, 68, 228],
+      "notes": "These are duplicate nodes of the same orange chair."
+    },
+    {
+      "query_id": "office_chair_description",
+      "text": "a chair used at a computer desk",
+      "expected_object_ids": [63, 68, 196, 228],
+      "notes": "object_0196 is a source-frame-verified red chair beside a lab desk; object_0023 is a workshop stool and is intentionally excluded."
+    },
+    {
+      "query_id": "water_bottle_literal",
+      "text": "a reusable water bottle",
+      "expected_object_ids": [219, 254],
+      "notes": "Both ids are duplicate nodes of the black drinking bottle."
+    },
+    {
+      "query_id": "water_bottle_description",
+      "text": "a black bottle used for drinking water",
+      "expected_object_ids": [219, 254],
+      "notes": "Descriptive query for the verified black bottle."
+    }
+  ]
+}

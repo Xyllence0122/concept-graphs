@@ -205,6 +205,104 @@ important or queried terms and require repeated, geometrically consistent
 observations during 3D fusion; a single prompted 2D detection is not proof that
 an object exists.
 
+## 4b. Establish a batch retrieval baseline
+
+Before filtering or merging the object map further, record retrieval quality on
+verified object ids.  The batch benchmark loads CLIP only once, ranks the full
+map for every query, and reports Top-1, Top-k, and mean reciprocal rank:
+
+```bash
+conda activate conceptgraphs-official
+unset PYTORCH_CUDA_ALLOC_CONF
+
+python offline_tools/benchmark_object_queries.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz" \
+  --queries-file offline_tools/rubiks_cube_benchmark.json \
+  --top-k 10 \
+  --device cuda \
+  --output-json "$SCENE/benchmark/baseline/rubiks_cube_batch.json"
+```
+
+`expected_object_ids` must come from source-frame inspection rather than from
+the automatic majority label. Add independently verified objects to the query
+manifest before using the summary metrics to choose curation thresholds. The
+baseline deliberately applies no quality filter so later curated maps can be
+compared against the same raw retrieval result.
+
+## 4c. Remove only low-evidence 3D fragments
+
+Create a separate map instead of overwriting the official post-processed map.
+The conservative first pass keeps the existing three-observation requirement,
+removes point clouds smaller than 50 points, and deliberately avoids a hard
+label-purity threshold:
+
+```bash
+SCENE="$HOME/Concept Graph/concept_graph_data/conceptgraphs_datasets/lab_static_full_2026-11-04_02"
+
+python offline_tools/curate_object_map.py \
+  --input-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz" \
+  --output-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_curated_obs3_pts50.pkl.gz" \
+  --report-json "$SCENE/benchmark/curation/curated_obs3_pts50.json" \
+  --min-observations 3 \
+  --min-points 50 \
+  --min-label-purity 0.0
+```
+
+Each retained object receives a stable `source_object_id`. Run the batch
+benchmark against the curated file and compare it with the baseline before
+adopting the candidate. Low label purity is recorded for review but is not a
+safe universal deletion rule: a real object can receive inconsistent labels
+across viewpoints.
+
+## 4d. Review and apply duplicate merges
+
+Generate a review list using appearance, AABB containment, and symmetric 3D
+point overlap. This command does not change the map:
+
+```bash
+python offline_tools/find_duplicate_candidates.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_curated_obs3_pts50.pkl.gz" \
+  --output-json "$SCENE/benchmark/curation/duplicate_candidates_obs3_pts50.json" \
+  --min-clip-similarity 0.92 \
+  --min-aabb-containment 0.30 \
+  --point-distance 0.05 \
+  --min-symmetric-overlap 0.50
+```
+
+Inspect the source masks with `export_object_review.py`, record each decision
+in `offline_tools/lab_duplicate_review.json`, and only then write another map:
+
+```bash
+python offline_tools/apply_reviewed_merges.py \
+  --input-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_curated_obs3_pts50.pkl.gz" \
+  --review-json offline_tools/lab_duplicate_review.json \
+  --output-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_curated_reviewed_v1.pkl.gz" \
+  --report-json "$SCENE/benchmark/curation/reviewed_merges_v1.json" \
+  --device cpu
+```
+
+The reviewed map preserves all original ids in `merged_source_object_ids` and
+marks uncertain semantic groups with `needs_relabel`. Re-run the same query
+benchmark after every curation or merge change.
+
+## 4e. Apply source-frame-reviewed labels
+
+Keep semantic corrections separate from the automatic `class_name` votes and
+CLIP embeddings. The reviewed label becomes the display and graph label, while
+the original votes remain available as provenance:
+
+```bash
+python offline_tools/apply_reviewed_labels.py \
+  --input-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_curated_reviewed_v1.pkl.gz" \
+  --labels-json offline_tools/lab_reviewed_labels.json \
+  --output-map "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v2.pkl.gz" \
+  --report-json "$SCENE/benchmark/curation/reviewed_labels_v2.json"
+```
+
+The full-lab v2 map contains five reviewed labels, including the planar table
+under the Rubik's cube. The table's automatic vote history was contaminated by
+the cube mask, so the reviewed semantic label is retained separately.
+
 ## 5. Infer a geometric support relation
 
 For queries such as "the panda plush toy on the table", first establish the
@@ -285,17 +383,65 @@ For the verified full-lab Rubik's-cube relation:
 SCENE="$HOME/Concept Graph/concept_graph_data/conceptgraphs_datasets/lab_static_full_2026-11-04_02"
 
 python offline_tools/visualize_query_map.py \
-  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v1_post.pkl.gz" \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v2.pkl.gz" \
   --scene-cloud "$SCENE/validation/fused_preview.ply" \
   --relations-file "$SCENE/relations/rubiks_cube_on_table.json" \
   --query "find the Rubik's cube on the table" \
   --mode auto \
   --top-k 5 \
-  --min-observations 5 \
+  --min-observations 3 \
   --min-object-points 50 \
-  --min-label-purity 0.60 \
+  --min-label-purity 0.0 \
   --screenshot-path "$SCENE/visualizations/rubiks_cube_official_style.png"
 ```
+
+The viewer resolves stored relation ids through `source_object_id` and
+`merged_source_object_ids`, so filtering and reviewed merges do not silently
+highlight a reindexed object. Keep the label-purity gate disabled for this
+broad open-vocabulary map; use the reviewed curation plus Top-k display to
+control clutter.
+
+## 7. Export and query the portable static semantic graph
+
+The compressed pickle is the retrieval source of truth, but it is not a
+portable ROS-facing interface. Export stable node ids, `map`-frame geometry,
+review provenance, and accepted relation evidence to JSON:
+
+```bash
+python offline_tools/export_semantic_graph.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v2.pkl.gz" \
+  --relations-file "$SCENE/relations/rubiks_cube_on_table.json" \
+  --scene-id lab_static_full_2026-11-04_02 \
+  --output-json "$SCENE/semantic_graph/lab_static_full_v2.json"
+```
+
+The verified export has 322 object nodes, one accepted
+`Rubik's cube --on--> table` edge, and zero nodes still marked for relabeling.
+Only accepted relation records are exported; the tool fails on a relation that
+references a missing curated-map object unless
+`--allow-unresolved-relations` is explicitly supplied.
+
+Run open-vocabulary retrieval on the final map and write the result to a
+machine-readable query file:
+
+```bash
+python offline_tools/query_object_map.py \
+  --map-file "$SCENE/pcd_saves/full_pcd_ram_lab_open_vocab_v1_full_lab_v2.pkl.gz" \
+  --query "Rubik's cube" \
+  --mode clip \
+  --top-k 5 \
+  --device cpu \
+  --frame-id map \
+  --robot-x 0.0 \
+  --robot-y 0.0 \
+  --standoff-m 0.50 \
+  --output-json "$SCENE/semantic_graph/query_rubiks_cube_v2.json"
+```
+
+`candidate_goal` is deliberately marked `candidate_only` and
+`requires_nav2_costmap_validation`. It faces the selected object from the
+requested standoff distance, but it must not be sent directly to an AMR until
+the robot pose, occupancy map, footprint, and Nav2 costmap are available.
 
 ## Upstream PyTorch compatibility
 

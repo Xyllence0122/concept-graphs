@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "scene_id": "lab_static_full_2026-11-04_02",
+  "verification_method": "Manual inspection of source RGB frames with stored masks and bounding boxes",
+  "decisions": [
+    {
+      "first_object_id": 219,
+      "second_object_id": 254,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same black handled drinking bottle across overlapping views."
+    },
+    {
+      "first_object_id": 15,
+      "second_object_id": 113,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same pink bottle on the workshop shelf."
+    },
+    {
+      "first_object_id": 48,
+      "second_object_id": 96,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same white workbench with red legs."
+    },
+    {
+      "first_object_id": 128,
+      "second_object_id": 146,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same fire extinguisher beside the large display."
+    },
+    {
+      "first_object_id": 296,
+      "second_object_id": 298,
+      "action": "merge",
+      "needs_relabel": true,
+      "notes": "Same perforated gray chair back across overlapping views; automatic radiator/heater labels are incorrect."
+    },
+    {
+      "first_object_id": 117,
+      "second_object_id": 122,
+      "action": "reject",
+      "needs_relabel": true,
+      "notes": "Overlapping mixed masks of the worktop and cabinets, not one clean physical entity."
+    },
+    {
+      "first_object_id": 322,
+      "second_object_id": 341,
+      "action": "merge",
+      "needs_relabel": true,
+      "notes": "Same black bag or case across overlapping views; automatic computer labels are unreliable."
+    },
+    {
+      "first_object_id": 97,
+      "second_object_id": 98,
+      "action": "merge",
+      "needs_relabel": true,
+      "notes": "Same red beverage can beside the workstation; automatic bottle/mouse labels conflict."
+    },
+    {
+      "first_object_id": 65,
+      "second_object_id": 190,
+      "action": "reject",
+      "needs_relabel": true,
+      "notes": "Large contaminated table-region masks containing mouse, keyboard, and surrounding surfaces."
+    },
+    {
+      "first_object_id": 134,
+      "second_object_id": 153,
+      "action": "merge",
+      "needs_relabel": true,
+      "notes": "Same small wooden block near the whiteboard stand; it is not a whiteboard eraser or the whiteboard."
+    },
+    {
+      "first_object_id": 12,
+      "second_object_id": 157,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same red worktable observed as separate fragments."
+    },
+    {
+      "first_object_id": 35,
+      "second_object_id": 216,
+      "action": "merge",
+      "needs_relabel": false,
+      "notes": "Same red chair observed as separate fragments."
+    }
+  ]
+}

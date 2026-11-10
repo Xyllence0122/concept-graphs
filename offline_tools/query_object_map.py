@@ -67,10 +67,21 @@ def load_objects(path: Path) -> list[dict[str, Any]]:
 
 
 def most_common_label(obj: dict[str, Any]) -> str:
+    reviewed_label = str(obj.get("reviewed_label", "")).strip()
+    if reviewed_label:
+        return reviewed_label
     labels = [str(label) for label in obj.get("class_name", [])]
     if not labels:
         return "unknown"
     return Counter(labels).most_common(1)[0][0]
+
+
+def source_object_ids(obj: dict[str, Any], list_index: int) -> list[int]:
+    values = obj.get("merged_source_object_ids")
+    if values is None:
+        return [int(obj.get("source_object_id", list_index))]
+    normalized = sorted({int(value) for value in values})
+    return normalized or [int(obj.get("source_object_id", list_index))]
 
 
 def label_similarity(query: str, label: str) -> float:
@@ -243,7 +254,9 @@ def main() -> None:
         confidences = np.asarray(obj.get("conf", []), dtype=np.float64)
         match = {
             "rank": rank,
-            "object_id": index,
+            "object_id": int(obj.get("source_object_id", index)),
+            "merged_source_object_ids": source_object_ids(obj, index),
+            "map_list_index": index,
             "label": labels[index],
             "similarity": round(float(similarities[index]), 6),
             "observations": int(obj.get("num_detections", 0)),

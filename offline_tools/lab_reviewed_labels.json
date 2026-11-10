@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scene_id": "lab_static_full_2026-11-04_02",
+  "verification_method": "Manual inspection of enlarged source RGB crops with and without mask overlays",
+  "labels": [
+    {
+      "source_object_id": 38,
+      "reviewed_label": "table",
+      "confidence": "high",
+      "notes": "Verified as the large planar support surface under object_0036. Automatic votes are contaminated by the Rubik's cube that rests on it."
+    },
+    {
+      "source_object_id": 97,
+      "reviewed_label": "red beverage can",
+      "confidence": "medium",
+      "notes": "Small red upright container with a beverage-can-like appearance; brand and exact contents are not resolved."
+    },
+    {
+      "source_object_id": 134,
+      "reviewed_label": "small wooden block",
+      "confidence": "medium",
+      "notes": "Small tan block on the floor beside the whiteboard stand; it is not the whiteboard or a whiteboard eraser."
+    },
+    {
+      "source_object_id": 296,
+      "reviewed_label": "chair",
+      "confidence": "high",
+      "notes": "Source crops clearly show a perforated gray chair back."
+    },
+    {
+      "source_object_id": 322,
+      "reviewed_label": "black bag",
+      "confidence": "medium",
+      "notes": "Black bag or case with a light rectangular handle or label; it is not a desktop computer or monitor."
+    }
+  ]
+}

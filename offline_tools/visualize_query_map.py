@@ -119,6 +119,14 @@ def object_index(value: Any) -> int:
     return int(text)
 
 
+def source_object_ids(obj: dict[str, Any], list_index: int) -> list[int]:
+    values = obj.get("merged_source_object_ids")
+    if values is None:
+        return [int(obj.get("source_object_id", list_index))]
+    normalized = sorted({int(value) for value in values})
+    return normalized or [int(obj.get("source_object_id", list_index))]
+
+
 def label_is_in_query(label: str, query: str) -> bool:
     label_normalized = normalize_text(label)
     query_normalized = normalize_text(query)
@@ -165,6 +173,11 @@ class QueryEngine:
         self.relations = relations
         self.mode = mode
         self.device = device
+        self.source_id_to_index = {
+            source_id: list_index
+            for list_index, obj in enumerate(objects)
+            for source_id in source_object_ids(obj, list_index)
+        }
 
     def _relation_result(self, query: str) -> QueryResult | None:
         for relation in self.relations:
@@ -176,12 +189,19 @@ class QueryEngine:
                 and label_is_in_query(target_label, query)
                 and relation_is_in_query(relation_name, query)
             ):
+                source_id = object_index(relation["source_id"])
+                target_id = object_index(relation["target_id"])
+                if (
+                    source_id not in self.source_id_to_index
+                    or target_id not in self.source_id_to_index
+                ):
+                    continue
                 return QueryResult(
-                    object_id=object_index(relation["source_id"]),
+                    object_id=self.source_id_to_index[source_id],
                     label=source_label,
                     score=1.0,
                     method="relation graph",
-                    support_id=object_index(relation["target_id"]),
+                    support_id=self.source_id_to_index[target_id],
                     support_label=target_label,
                     relation=relation,
                 )
@@ -378,6 +398,13 @@ class QueryMapWindow:
     def _point_count(self, index: int) -> int:
         return len(self.objects[index]["pcd_np"])
 
+    def _display_object_id(self, index: int) -> str:
+        ids = source_object_ids(self.objects[index], index)
+        if len(ids) == 1:
+            return f"object_{ids[0]:04d}"
+        aliases = ",".join(str(value) for value in ids)
+        return f"object_{ids[0]:04d} [{aliases}]"
+
     def _label_purity(self, index: int) -> float:
         labels = self.objects[index].get("class_name", [])
         if isinstance(labels, str):
@@ -490,7 +517,8 @@ class QueryMapWindow:
                     else (result.score if index == result.object_id else 0.0)
                 )
                 candidate_lines.append(
-                    f"{rank}. object_{index:04d} | {self.labels[index]} | "
+                    f"{rank}. {self._display_object_id(index)} | "
+                    f"{self.labels[index]} | "
                     f"{score:.3f} | obs {self._observation_count(index)} | "
                     f"purity {self._label_purity(index):.2f}"
                 )
@@ -505,7 +533,8 @@ class QueryMapWindow:
             f"Match: {result.label} --on--> {result.support_label}"
         )
         self.evidence_label.text = (
-            f"object_{result.object_id:04d} -> object_{result.support_id:04d}\n"
+            f"{self._display_object_id(result.object_id)} -> "
+            f"{self._display_object_id(result.support_id)}\n"
             f"Verified relation graph\ncontact gap {gap_mm:.1f} mm | "
             f"support overlap {overlap:.1f}%"
         )
